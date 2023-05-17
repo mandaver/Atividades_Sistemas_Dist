@@ -1,43 +1,53 @@
-import socket # Biblioteca de comunicação por rede
-import hashlib # Biblioteca de criptografia hash
-import threading # Biblioteca para processamento paralelo
+import sys
+import socket
+import threading
+import base64
 
-# Define o host e a porta do servidor
-HOST = '127.0.0.1' # Endereço IP do servidor
-PORT = 55555 # Porta usada para a comunicação
+HOST = 'localhost'  # Endereço IP ou nome do host do servidor
+PORT = 5000  # Porta utilizada para a conexão
 
-# Cria o socket do cliente
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # Cria um socket IPv4 usando o protocolo TCP
-client.connect((HOST, PORT)) # Conecta-se ao servidor usando o endereço IP e a porta definidos acima
+def main():
+    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # Cria um objeto de socket TCP/IP
 
-# Função para receber mensagens do servidor
-def receive_messages():
+    try:
+        client.connect((HOST, PORT))  # Conecta ao servidor utilizando o endereço e a porta especificados
+    except:
+        return print('\nNão foi possível se conectar ao servidor!\n')  # Exibe uma mensagem de erro se a conexão falhar
+
+    print('\nConectado')
+
+    thread1 = threading.Thread(target=receiveMessages, args=[client])  # Cria uma thread para receber mensagens do servidor
+    thread2 = threading.Thread(target=sendMessages, args=[client])  # Cria uma thread para enviar mensagens para o servidor
+
+    thread1.start()  # Inicia a thread de recebimento de mensagens
+    thread2.start()  # Inicia a thread de envio de mensagens
+
+def receiveMessages(client):
     while True:
-        # Recebe a mensagem criptografada do servidor
-        encrypted_message = client.recv(1024)
+        try:
+            msg = client.recv(2048)  # Recebe uma mensagem do servidor
+            if not msg:  # Se a mensagem estiver vazia, significa que a conexão foi encerrada
+                break
+            else:
+                decoded_msg = base64.b64decode(msg).decode('ascii')  # Decodifica a mensagem recebida (codificada em base64) para texto
+                sys.stdout.write('\033[K' + decoded_msg + '\r\n')  # Exibe a mensagem decodificada na tela
+        except:
+            print('\nNão foi possível permanecer conectado no servidor!\n')  # Exibe uma mensagem de erro se a conexão falhar
+            print('Pressione <Enter> para continuar...')
+            client.close()  # Fecha a conexão com o servidor
+            break
 
-        # Decodifica a mensagem criptografada usando o algoritmo SHA-256
-        decrypted_message = hashlib.sha256(encrypted_message.decode().encode()).hexdigest()
+def sendMessages(client):
+    while True:
+        try:
+            message = input().encode('ascii')  # Aguarda a entrada do usuário e codifica a mensagem em ASCII
+            if not message:  # Se a mensagem estiver vazia, significa que o usuário quer encerrar a conexão
+                client.close()  # Fecha a conexão com o servidor
+                break
+            base64_bytes = base64.b64encode(message)  # Codifica a mensagem em base64
+            client.sendall(base64_bytes)  # Envia a mensagem codificada para o servidor
+        except:
+            return
 
-        # Imprime a mensagem decodificada
-        print(decrypted_message)
-
-# Inicia uma thread para receber mensagens do servidor
-receive_thread = threading.Thread(target=receive_messages)
-receive_thread.start()
-
-while True:
-    # Lê a entrada do usuário
-    message = input()
-
-    # Criptografa a mensagem usando o algoritmo SHA-256
-    encrypted_message = hashlib.sha256(message.encode()).hexdigest()
-
-    # Envia a mensagem criptografada para o servidor
-    client.send(encrypted_message.encode())
-
-    # Se a mensagem do usuário for "bye", encerra o cliente
-    if message == "bye":
-        client.close()
-        break
+main()  # Executa a função principal para iniciar a execução do programa
 
