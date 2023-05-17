@@ -6,5 +6,12 @@
 + Exemplo: ao enviar a string "Hello World!!!" ao servidor a mensagem "!!!dlroW olleH" deve ser respondida ao cliente.
 
 
-> Resursos utilizados
-+ Virtual
+> Recursos Utilizados 
++ Máquina virtual: Ubunto 22.04
++ Python 3
+
+> Bibliotecas utilizadas 
++ socket
++ theading
++ ramdom
+
