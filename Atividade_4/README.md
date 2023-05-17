@@ -16,5 +16,5 @@
 
 > Comandos para execução
 + python3 -m grpc_tools.protc -I./ --python_out=. --grpc_python_out=. my_service.proto
-+ python3 server_grpc.py
-+ python3 cliente_grpc.py
++ python3 server.py
++ python3 cliente.py
