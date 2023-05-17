@@ -14,4 +14,6 @@
 + socket
 + theading
 + ramdom
++ psutil
++ matplotlib
 
