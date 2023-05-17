@@ -1,61 +1,55 @@
-import socket # Biblioteca para comunicação em rede
-import threading # Biblioteca para criar threads em Python
-import hashlib #  Biblioteca para criptografar a mensagem original
+import socket
+import threading
+import base64
 
-# Define o endereço IP do servidor como localhost (127.0.0.1) e a porta como 55555
-HOST = '127.0.0.1'
-PORT = 55555
+HOST = ''  # Endereço IP ou nome do host em que o servidor será executado
+PORT = 5000  # Porta utilizada pelo servidor
 
-# Cria um objeto de socket para o servidor usando IPv4 e TCP
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+clients = []  # Lista para armazenar os clientes conectados
 
-# Liga o socket à porta e ao endereço definidos anteriormente
-server.bind((HOST, PORT))
+def main():
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # Cria um objeto de socket TCP/IP
 
-# Cria uma lista vazia para armazenar todos os clientes conectados
-clients = []
+    try:
+        s.bind((HOST, PORT))  # Associa o socket ao endereço e à porta especificados
+        print(f'Servidor escutando na porta {PORT}...')
+        s.listen()  # Inicia a escuta por conexões entrantes
+    except:
+        return print('\nNão foi possível iniciar o servidor!\n')  # Exibe uma mensagem de erro se ocorrer um problema ao iniciar o servidor
 
-# Função que será executada em uma thread para lidar com as conexões dos clientes
-def handle_client(client):
     while True:
-        # Recebe a mensagem original e a mensagem criptografada do cliente
-        message = client.recv(1024)
-        encrypted_message = client.recv(1024)
+        client, addr = s.accept()  # Aceita uma conexão de um cliente
+        print(f'Conectado por {addr}')
+        clients.append(client)  # Adiciona o cliente à lista de clientes conectados
 
-        # Decodifica as mensagens recebidas de bytes para string
-        message = message.decode()
-        encrypted_message = encrypted_message.decode()
+        thread = threading.Thread(target=messagesTreatment, args=[client])  # Cria uma thread para tratar as mensagens do cliente
+        thread.start()  # Inicia a thread
 
-        # Criptografa a mensagem original usando o algoritmo SHA-256
-        hashed_message = hashlib.sha256(message.encode()).hexdigest()
-
-        # Envia a mensagem criptografada e a mensagem original para todos os outros clientes conectados
-        for c in clients:
-            if c != client:
-                c.send(message.encode())
-                c.send(hashed_message.encode())
-
-        # Se a mensagem do cliente for "bye", desconecta o cliente
-        if message == "bye":
-            clients.remove(client)
-            client.close()
+def messagesTreatment(client):
+    while True:
+        try:
+            msg = client.recv(2048)  # Recebe uma mensagem do cliente
+            if not msg:  # Se a mensagem estiver vazia, significa que a conexão foi encerrada pelo cliente
+                deleteClient(client)  # Remove o cliente da lista de clientes conectados
+                break
+            decoded_message = client.getpeername()[0] + ': ' + base64.b64decode(msg).decode('ascii')  # Decodifica a mensagem recebida (codificada em base64) para texto
+            encoded_message = base64.b64encode(decoded_message.encode('ascii'))  # Codifica a mensagem em base64
+            print(encoded_message)  # Exibe a mensagem codificada (somente para depuração)
+            print(decoded_message)  # Exibe a mensagem decodificada (somente para depuração)
+            broadcast(encoded_message, client)  # Envia a mensagem para todos os outros clientes conectados
+        except:
+            deleteClient(client)  # Remove o cliente da lista de clientes conectados em caso de erro
             break
 
-# Função para iniciar o servidor e aguardar por novas conexões
-def start_server():
-    # Inicia o servidor
-    server.listen()
+def broadcast(msg, sender_client):
+    for clientItem in clients:
+        if clientItem != sender_client:  # Envia a mensagem para todos os clientes, exceto o remetente original
+            try:
+                clientItem.send(msg)  # Envia a mensagem codificada para o cliente
+            except:
+                deleteClient(clientItem)  # Remove o cliente da lista de clientes conectados em caso de erro ao enviar a mensagem
 
-    while True:
-        # Aguarda por novas conexões de clientes
-        client, address = server.accept()
+def deleteClient(client):
+    clients.remove(client)  # Remove o cliente da lista de clientes conectados
 
-        # Adiciona o cliente à lista de clientes conectados
-        clients.append(client)
-
-        # Inicia uma nova thread para lidar com o cliente
-        client_thread = threading.Thread(target=handle_client, args=(client,))
-        client_thread.start()
-
-# Inicia o servidor chamando a função start_server()
-start_server()
+main()  # Executa a função principal para iniciar o servidor
