@@ -1,5 +1,5 @@
-import pika
-from termcolor import colored
+import pika 
+from termcolor import colored  #biblioteca Python para imprimir texto colorido no terminal, "Incêndio detectado!" em vermelho.
 
 # Conecta ao RabbitMQ
 connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))  # Conecta ao servidor RabbitMQ local
