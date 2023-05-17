@@ -1,21 +1,51 @@
-import socket  # Importa o módulo socket para utilizar comunicação em rede
-import threading  # Importa o módulo threading para enviar múltiplas requisições
+import socket
+import random
+import threading  
 
-def send_message(sock, message):
-    # Função que envia uma mensagem para o servidor e imprime a resposta recebida
-    sock.sendall(message.encode())  # Codifica e envia a mensagem para o servidor
-    response = sock.recv(1024)  # Recebe a resposta do servidor
-    print(f"Resposta do servidor: {response.decode()}")  # Imprime a resposta do servidor
+HOST = 'localhost'
+PORT = 5000
 
-def start_client(host, port, num_threads, message):
-    # Função que inicia o cliente
-    threads = []
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.connect((host, port))  # Conecta-se ao servidor no endereço e porta especificados
-        for i in range(num_threads):
-            t = threading.Thread(target=send_message, args=(s, message))  # Cria uma nova thread para enviar a mensagem para o servidor
-            t.start()  # Inicia a thread
-            threads.append(t)  # Adiciona a thread à lista de threads criadas
-        for t in threads:
-            t.join()  #
+# Tamanhos das mensagens em bytes
+tamanhos = [1, 512, 1024]
+
+def main():
+    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    try:
+        client.connect((HOST, PORT))
+    except:
+        return print('\nNão foi possível se conectar ao servidor!\n')
+
+    username = input('Usuário> ')
+    print('\nConectado')
+
+    thread1 = threading.Thread(target=receiveMessages, args=[client])
+    thread2 = threading.Thread(target=sendMessages, args=[client, username])
+
+    thread1.start()
+    thread2.start()
+
+def receiveMessages(client):
+    while True:
+        try:
+            msg = client.recv(2048).decode('utf-8')
+            print(msg+'\n')
+        except:
+            print('\nNão foi possível permanecer conectado no servidor!\n')
+            print('Pressione <Enter> Para continuar...')
+            client.close()
+            break
+
+def sendMessages(client, username):
+    while True:
+        try:
+            tamanho = random.choice(tamanhos)
+            msg = b'K' * tamanho  # cria uma mensagem com o caracter 'K' repetido n vezes
+            client.send(f'<{username}> {msg}'.encode('utf-8'))
+            if msg == "quit":
+                return False
+        except:
+            return
+
+main()
 
